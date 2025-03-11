@@ -1,11 +1,9 @@
 ---
-title: "dementia_classification"
+title: "Brain Volume, Mental State Examination, and Education Attainment as Possible Diagnostic Predictors for Alzheimer's Disease"
 format: 
    html:
       embed-resources: true
 ---
-
-## Brain Volume, Mental State Examination, and Education Attainment as Possible Diagnostic Predictors for Alzheimer's Disease
 
 ### Introduction:
 
@@ -366,6 +364,11 @@ This matrix shows that out of 85 observations, 47 of them were correctly predict
 confusion <- bind_predict |>
 conf_mat(truth = Group, estimate = .pred_class)
 confusion
+```
+
+```{r}
+#| echo: false
+autoplot(confusion, type = 'heatmap')
 ```
 
 ### Discussion
