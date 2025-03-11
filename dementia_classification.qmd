@@ -1,0 +1,393 @@
+---
+title: "dementia_classification"
+format: 
+   html:
+      embed-resources: true
+---
+
+## Brain Volume, Mental State Examination, and Education Attainment as Possible Diagnostic Predictors for Alzheimer's Disease
+
+### Introduction:
+
+Dementia is a chronic condition associated with aging and brain atrophy, involving widespread neuropsychological deficits that significantly hinder daily activities (Reuben et. al, 2010). Our project focuses on Alzheimer's disease, the most common form of dementia. Unfortunately, Alzheimer’s has neither definitive diagnosis nor cure (Ash, 2007). This exploratory analysis aims to identify predictors to help with the early detection and prevention of Alzheimer's disease.
+
+Specifically, we want to examine whether (1) total brain volume, (2) Mini-mental State Examination score, and (3) education attainment can predict individuals’ dementia state. If these variables demonstrate to have high predictive strength for classifying dementia groups, they may be applied clinically as an accessible convenient technique for detecting early signs of Alzheimer's disease in clinical settings.
+
+We will use the longitudinal tabular dataset Dementia Classification: Compare Classifiers from Kaggle.com (Deepak N, 2018), with the pathway “oasis_longitudinal.csv”. It should be noted that this is a real data set coming directly from the MRI Open Access Series of Imaging Studies (OASIS-2, 2009). This dataset consists of 15 variables and 373 rows, sampling from 150 participants of age 60-96. It classifies whether participants have dementia or not. This table includes description of the variables:
+
+<img src="https://raw.githubusercontent.com/churancc/Dementia_Project/main/Table%20column%20descriptors.png" width="500"/>
+
+**Table 1.0: Description of Dataset Variables**
+
+### Methods & Results:
+
+Exploratory data analysis (EDA) We begin by loading our data set into Jupyter and tidying before investigating the data set. Using the R-programming language on Jupyter, the main characteristics of the data set is summarized and data visualizations are created for variables of interest.
+
+Loading & Tidying Data We load the packages tidyverse, purr and tidymodels in Jupyter R. To ensure data reproducibility, the seed to 999.
+
+```{r}
+library(tidyverse)
+library(purrr)
+library(tidymodels)
+
+set.seed(999)
+```
+
+The data set is imported as `dementia_df` via a url link. We changed the column name `M/F` to `Sex` to improve descriptivity.
+
+```{r}
+url <- "https://raw.githubusercontent.com/churancc/Dementia_Project/main/oasis_longitudinal.csv"
+
+dementia_df <- read_csv(url)
+colnames(dementia_df)[6] <- "Sex"
+
+head(dementia_df) # Preview data set
+tail(dementia_df)
+```
+
+Previewing the data, we identified several ways to tidy our data:
+
+(1) Since `Group`, `Sex`, `Hand`, `SES`, and `CDR` are categorical variables, their class type should therefore be changed into discrete factors `<fct>` instead of numerical double `<dbl>`. `head()` and `tail()` then provide a preview of the first and last six observations of the table. We see that the variables of concern are now stored as `<fct>`.
+
+```{r}
+dementia <- dementia_df |>
+    mutate(across(c("Group", "Sex", "Hand", "SES", "CDR"), as_factor))
+ head(dementia) # Preview data set
+```
+
+(2) Given that R has difficulty reading column names with spaces, so the variable names are reformatted with the `make.names()` function to create `unique` names which R can process. The dataframe with new names is renamed to `dementia`.
+
+```{r}
+unique_names <- make.names(names(dementia), unique = TRUE)
+colnames(dementia) <- unique_names
+
+head(dementia) # Preview data set
+```
+
+```{r}
+dementia <- dementia |>
+                select(-c(SES, CDR, Hand))
+```
+
+(4) The class “Converted” in `Group` characterizes patients who were initially non-demented but “converted” into the `Demented` group on a subsequent visit.
+
+    Our analysis concerns the difference between “demented”/”non-demented”, so we decided to filter out all “Converted” observations.
+
+```{r}
+# Filter out "Converted"
+dementia_filter <- dementia |>
+            filter(Group != "Converted") 
+```
+
+```{r}
+dementia_filter |>
+pull(Group) |>
+levels() 
+# Filtering the dataframe doesn't change the number of factor levels.
+```
+
+> However, using `pull()` and `levels()` we found that converted is still within the `Group` variable.
+
+To resolve this problem, `fct_drop()` is used to drop observations that contain a factor level with no value entries. This removed “Converted” from `Group`. We checked the categories of `Group` again.
+
+```{r}
+dementia <- dementia |>
+            filter(Group != "Converted") |>
+            mutate(Group = fct_drop(Group)) 
+
+dementia |>
+pull(Group) |>
+levels() # Group no longers has the factor level 'Converted'.
+```
+
+(5) Finally, we identified two NA (missing values) in the MMSE column from Subject#181, which we removed. This removal is justifiable since Subject#181’s measures did not vary greatly between visits.
+
+```{r}
+dementia <- dementia |>
+            filter(!is.na(MMSE))
+```
+
+### Summary Data
+
+In order to prevent human bias from “seeing” the test data, our data summary is done by examining the training data.
+
+The data set is split into a training and a testing set.
+
+```{r}
+dementia_split <- initial_split(dementia, prop = 0.75, strata = Group)
+dementia_train <- training(dementia_split) 
+dementia_test <- testing(dementia_split)
+```
+
+#### Tables
+
+**First table**:
+
+-   We grouped `subject ID` and `Group` variables and then `Group` again to find the summarized proportions of Non-demented and Demented. This table indicates 71 subjects remained non-demented throughout all visits and 61 subjects remained demented in the training set.
+
+```{r}
+class_table <- dementia_train |>
+                    group_by(Subject.ID, Group) |>
+                    summarize(Count = n()) |>
+
+                    group_by(Group) |>
+                    summarize(Count = n())
+
+class_table
+
+```
+
+**Second table**:\
+- The means of each predictor variable chosen is calculated as shown: `EDUC` `MMSE` `nWBV`
+
+```{r}
+predictor_mean_table <- dementia_train |>
+select(EDUC, MMSE, nWBV)|>
+map_df(mean, na.rm = TRUE)
+
+predictor_mean_table
+```
+
+#### Visualization
+
+Boxplots are used to observe the differences between Nondemented and Demented groups. By inputting the training data into boxplots, a large median difference between the Nondemented and Demented groups indicates the predictors chosen to be good.
+
+> **What is a boxplot?**
+
+> The features of box plots include the box-body and line extensions (called “whiskers”). Each whisker represents 25% of the data. Thus, the bolded line is the median, which separates the lower and upper 50% of data. A longer box-body suggests high variability (uncertainty) in the measure, and shorter box-body suggest low variability.
+
+```{r}
+options(repr.plot.width = 9)
+
+education_boxplot <- dementia_train |>
+                     ggplot(aes(x = Group, y = EDUC, fill = Group)) + 
+                     geom_boxplot(outlier.size = 2) +
+                     theme(text = element_text(size = 20)) + 
+                     labs(y = "Highest Level of Education Completed (years)")+
+                     ggtitle("Comparison of EDUC Between \n Demented & Nondemented Groups")
+
+education_boxplot + scale_fill_brewer(palette = "RdYlBu")
+```
+
+**Figure 1: Boxplot Comparison of EDUC Between Demented & Nondemented Groups** \> This box plot compares the difference in EDUC completed across Nondemented and Demented individuals in the training data.
+
+> There are more Nondemented individuals obtaining higher levels of education in comparison with the Demented group. Only \~25% of subjects in the Demented group (upper whisker) have completed education as high as the top 50% of subjects in the Nondemented group, **suggesting a lower EDUC may be associated with dementia.**
+
+```{r}
+options(repr.plot.width = 9)
+
+MMSE_boxplot <- dementia_train |>
+                     ggplot(aes(x = Group, y = MMSE, fill = Group)) + 
+                     geom_boxplot() +
+                     theme(text = element_text(size = 20)) + 
+                     labs(y = "Mental State Examination Scores")+
+                     ggtitle("Comparison of MMSE Between \n Demented & Nondemented Groups")
+
+MMSE_boxplot + scale_fill_brewer(palette = "RdYlBu")
+```
+
+**Figure 2: Boxplot Comparison of MMSE Between Demented & Nondemented Groups**
+
+> Nondemented individuals’ performance in the MMSE show a low variability as most subjects performed excellently except two outliers. However, there is a wider range of performance in the Demented subjects. Around 75% of subjects performed worse than all Nondemented subjects combined, **proposing that lower MMSE scores may indicate signs of dementia.**
+
+```{r}
+options(repr.plot.width = 9)
+
+nWBV_boxplot <- dementia_train |>
+                     ggplot(aes(x = Group, y = nWBV, fill = Group)) + 
+                     geom_boxplot() +
+                     theme(text = element_text(size = 20)) + 
+                     labs(y = "Total Brain Volume Estimates (normalized unit)")+
+                     ggtitle("Comparison of nWBV Between \n Demented & Nondemented Groups")
+ 
+
+nWBV_boxplot + scale_fill_brewer(palette = "RdYlBu")
+```
+
+**Figure 3: Boxplot Comparison of nWBV Between** \n Demented & Nondemented Groups
+
+> About half of the Nondemented subjects have larger nWBV measures than 75% of Demented subjects combined. Importantly, no individuals in the Demented group’s measure are as high as nWBV = 0.80. This suggests that the Demented samples show a greater extent of brain atrophy. Indicating, lower nWBC may be related to dementia.
+
+The above boxplots show distinct differences between the Nondemented vs. Demented groups across `EDUC`, `MMSE`, and `nWBV`. These differences helped to affirm our predictor choice for classifying dementia state.
+
+### Final Analysis with K-Nearest Neighbors Algorithm
+
+This analysis will evaluate the `EDUC`, `MMSE`, and `nWBV` predictive strength for the classifier `Group`.
+
+We first apply the K-Nearest Neighbors Classification Algorithm to build a classification model on our training data.
+
+Reminder: `set.seed(999)` is maintained.
+
+We first create a model specification with the object name `knn_spec` using `nearest_neighbor()`. `weight_func = “rectangular”` gives each K-nearest neighbor an equal voting chance. \`neighbors = tune()’ specifies to tune an array of K-values . We set the model engine to K-nearest neighbors with “kknn” and specify a “classification” problem.
+
+```{r}
+knn_spec <- nearest_neighbor(weight_func = "rectangular", 
+                             neighbors = tune()) |>
+            set_engine("kknn") |>
+            set_mode("classification")
+
+```
+
+**Recipe** specifies `Group` as the label and `EDUC + MMSE + nWBV` as the model predictors.
+
+We set `data = dementia_train` for model construction and standardize using `step_scale()` and `step_center`.
+
+> Importantly, we do not use the testing data during model building. The final model evaluation uses the testing set as the “answer key”. If the training model contains the testing data, the model would appear more accurate than it really is.
+
+```{r}
+dementia_recipe <- recipe(Group ~ EDUC + MMSE + nWBV, 
+                          data = dementia_train) |>
+                    step_scale(all_predictors()) |>
+                    step_center(all_predictors())
+```
+
+#### Cross-validation Accuracies & Model Fitting:
+
+`dementia_vfold` creates a 10-fold, ‘v = 10’, splitting into training & validation sets to evaluate the model accuracy within the training data. We choose 10 because a larger number of folds would increase the accuracy in finding the best k.
+
+```{r}
+dementia_vfold <- vfold_cv(dementia_train, v = 10, strata = Group)
+```
+
+`kvals` specifies the range of k values in a dataframe to evaluate during cross-validation from K= 1 to 100 by multiples of 5.
+
+```{r}
+kvals <- tibble(neighbors = seq(from = 1, to = 100, by = 5))
+```
+
+Initiating a **workflow** with the model specification and recipe, we use `tune_grid()` to perform the model fitting with `kvals` for the 10-fold splits from `dementia_vfold`. Finally, `collect_metrics()` aggregates all K-values and their `mean` accuracy estimates.
+
+```{r}
+dementia_wrkflw <- workflow() |>
+                    add_model(knn_spec) |>
+                    add_recipe(dementia_recipe) |>
+                    tune_grid(resamples = dementia_vfold, grid = kvals) |>
+                    collect_metrics()
+```
+
+To view the cross-validation accuracies and find the optimal K-value with the highest accuracy, we filter the accuracy estimates and arrange the estimates from highest to lowest in the table `accuracies`.
+
+```{r}
+accuracies <- dementia_wrkflw |>
+                filter(.metric == "accuracy") |>
+                arrange(desc(mean)) 
+head(accuracies)
+```
+
+> The first six rows of the `accuracies` dataframe indicate K `neighbors` = 16 has the highest cross-validation accuracy with `mean` estimate = 0.813.
+
+We also produce a visualization to confirm our parameter K selection in an Accuracy Estimates vs. K Neighbors Graph. K = 16 evidently has the highest estimated accuracy.
+
+```{r}
+accuracy_vs_k <- ggplot(accuracies, aes(x = neighbors, y = mean)) + 
+                geom_point() +
+                geom_line() +
+                labs(x = "K Neighbors", y = "Accuracy Estimate", 
+                     title = "Accuracy Estimates for Range of K = 1 to 100") +
+                theme(text = element_text(size = 16)) 
+
+accuracy_vs_k
+
+```
+
+**Figure 4: Accuracy Estimates vs. K Neighbors Graph for K = 1 to 100**
+
+Visualizations for this 3-predictors model would be a 3D scatterplot. In general, high-MMSE performers are most likely to be classified as nondemented, as green points accumulate most around high-MMSE.
+
+```{r}
+# Comment out the below to install the "plotly" for 3D visualization for 3 predictors.
+# install.packages("plotly")
+library(plotly)
+```
+
+```{r}
+dementia_3D <- plot_ly(dementia_train, x = ~EDUC, y = ~MMSE, z = ~nWBV, type="scatter3d", 
+        mode = "markers", opacity = 0.6, size = 3, color = ~Group) |>
+  layout(scene = list(xaxis = list(titlefont = list(size = 10), 
+                                   title = 'Education <br> Attainment (year)'),
+                      yaxis = list(titlefont = list(size = 10),
+                                   title = 'Mini-Mental <br> Examination Scores'),
+                      zaxis = list(titlefont = list(size = 10),
+                                   title = 'Total Brain <br> Volume (cm^3)')))
+dementia_3D
+```
+
+#### Evaluate Optimal K with Testing Set
+
+We extract the best K-neighbor as `optimal_k` from the `accuracies` table to build an optimal classifier.
+
+```{r}
+optimal_k <- accuracies|>
+                slice(1) |>
+                pull(neighbors)
+optimal_k
+```
+
+We construct a new model specification `optimal_spec` with `optimal_k`. Using this new model specification, we fit a predictive model in `optimal_fit` with training data. The old recipe `dementia_recipe` is used again.
+
+```{r}
+optimal_spec <- nearest_neighbor(weight_func = "rectangular", neighbors = optimal_k) |>
+                set_engine("kknn") |>
+                set_mode("classification")
+
+dementia_recipe
+
+optimal_fit <- workflow() |>
+                    add_model(optimal_spec) |>
+                    add_recipe(dementia_recipe) |>
+                    fit(data = dementia_train)
+```
+
+Finally, we use the fitted model to predict the class for the testing set based on the same predictors specified in `dementia_recipe`.
+
+Binding the predicted column into the testing set’s dataframe, we see the prediction in the `.pred_class` column and the actual class is in the `Group` column.
+
+```{r}
+optimal_predict <- predict(optimal_fit, dementia_test)
+bind_predict <-  bind_cols(optimal_predict, dementia_test)
+head(bind_predict)
+```
+
+Subsequently, we assess our classifier’s accuracy with the `metrics()` function. Our optimal classifier estimates an 81.0% accuracy on the testing set.
+
+```{r}
+optimal_metrics <- bind_predict |>
+                    metrics(truth = Group, estimate = .pred_class)
+
+optimal_metrics |>
+    filter(.metric == "accuracy")
+```
+
+We also generate a confusion matrix for the classifier, which shows a table of predicted and correct labels for the testing set.
+
+This matrix shows that out of 85 observations, 47 of them were correctly predicted as Nondemented and 21 as Demented. Meanwhile, 1 Nondemented subject was incorrectly predicted as Demented, and 15 of Demented were incorrectly predicted as Nondemented.
+
+```{r}
+confusion <- bind_predict |>
+conf_mat(truth = Group, estimate = .pred_class)
+confusion
+```
+
+### Discussion
+
+Our analysis aimed to predict the presence of Alzheimer’s Disease (AD), depending on education levels, Mini-Mental Status Examination and Total Brain Volume. To answer this categorical predictive problem, we used the K-nearest neighbors classification algorithm. Prior to our analysis, we anticipated that people over 60 with high mini-mental state exam scores, levels of schooling, and total brain volume would most likely be non-demented. Our exploratory analysis confirmed our expectation.
+
+To build a strong predictive model, we conducted parameter selection using cross-validated on the training set. Our best parameter selection was K = 16 with a 81.25% validation accuracy. Subsequently, using the optimal K to predict the testing set, our model's accuracy was discovered to be 80.95%, which was comparable to the cross-validation accuracy estimate. It may appear that our classifier can effectively detect signs of AD with a new data set; however, a satisfactory accuracy depends on the application. In the confusion matrix, the testing set prediction produced 47 true negatives, 21 true positive, 15 false negative and 1 false positive. At first glance, 47 + 21 = 68 correct predictions out of 84 seems plausible, yet there are 15 demented patients being falsely classified as nondemented. That is, the false-negative rate here is 15/68 = 17.86%. This false-negative rate suggests that application-wise, this predictive model is not exceptional at correctly detecting dementia.
+
+Another distinction to make is the fact that accuracy is calculated taking into consideration both true positive and true negative. This is a reason contributing to the high accuracy percentage we received. Notice that there are more than double the amount of true false predictions compared to true positive. This is an example of a class imbalance that often occurs in data analysis. We are only interested in how our model can successfully predict the negative class (demented group), so successfully predicting the positive (non-demented group) is unuseful. This makes the accuracy we initially calculated very misleading. This is a limitation of our data analysis that can be improved by balancing our dataset initially so it will have similar numbers of positive and negative classes. Also, to improve our method of assessing future predictive models, precision and recall can be used according to Wasikowski & Chen (2010).
+
+Despite the limitations and concerns mentioned, our model can still contribute positively to medical data analysis. As the size of the medical digital database is rapidly expanding, data analysis is more common, suggesting a higher demand for classification models to help with disease detection. In addition to the lack of definitive diagnoses, as global aging is becoming more relevant, improvement on dementia detection is crucial. Our analysis can thus help with predicting onsets of AD, allowing medical professionals to provide effective treatments before symptoms exacerbate. A more accessible education system may also delay or prevent AD.
+
+Further research can be done to address the imbalance of our chosen dataset, improve the accuracy of our classification model and utilize better methods of assessing the model. As more data sets related to Dementia become available, the predictive model for classification can then be continued to improve upon. This may lead to future questions not only regarding other predictors but also how the different predictors may have effects on each other that contribute to the development of Dementia. Our model could also be applied to other neurodegenerative diseases, such as Parkinson’s disease.
+
+### Reference
+
+Ash, L. E. (2007). Dementia. On Call Series: On Call Neurology (3rd ed., pp. 401-417), W.B. Saunders.
+
+Deepak N. (2018). Dementia Classification :Compare Classifiers: Python · MRI and Alzheimers. Kaggle. <https://www.kaggle.com/code/deepak525/dementia-classification-compare-classifiers/input>
+
+OASIS-2: Longitudinal. (2009). Open Access Series of Imaging Studies. doi: 10.1162/jocn.2009.21407
+
+Reuben, A., Brickman, A., Muraskin, J., Steffener, J., & Stern, Y. (2011). Hippocampal Atrophy Relates to Fluid Intelligence Decline in the Elderly. Journal of the International Neuropsychological Society, 17(1), 56-61. doi: 10.1017/S135561771000127X
+
+Wasikowski, M. and Chen, X. -w. (2010). "Combating the Small Sample Class Imbalance Problem Using Feature Selection," in IEEE Transactions on Knowledge and Data Engineering, vol. 22, no. 10, pp. 1388-1400, Oct. 2010, doi: 10.1109/TKDE.2009.187.
