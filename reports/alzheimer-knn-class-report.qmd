@@ -1,21 +1,23 @@
 ---
 title: "Brain Volume, Mental State Examination, and Education Attainment as Possible Diagnostic Predictors for Alzheimer's Disease"
+author: "Vincy Huang, Annie Li, Churan Chang, Ece Çal"
 format: 
    html:
       embed-resources: true
+bibliography: references/references.bib
+csl: references/apa.csl
+lightbox: true
 ---
 
 ### Introduction:
 
-Dementia is a chronic condition associated with aging and brain atrophy, involving widespread neuropsychological deficits that significantly hinder daily activities (Reuben et. al, 2010). Our project focuses on Alzheimer's disease, the most common form of dementia. Unfortunately, Alzheimer’s has neither definitive diagnosis nor cure (Ash, 2007). This exploratory analysis aims to identify predictors to help with the early detection and prevention of Alzheimer's disease.
+Dementia is a chronic condition associated with aging and brain atrophy, involving widespread neuropsychological deficits that significantly hinder daily activities [@Reuben2011]. Our project focuses on Alzheimer's disease, the most common form of dementia. Unfortunately, Alzheimer’s has neither definitive diagnosis nor cure [@Ash2007]. This exploratory analysis aims to identify predictors to help with the early detection and prevention of Alzheimer's disease.
 
 Specifically, we want to examine whether (1) total brain volume, (2) Mini-mental State Examination score, and (3) education attainment can predict individuals’ dementia state. If these variables demonstrate to have high predictive strength for classifying dementia groups, they may be applied clinically as an accessible convenient technique for detecting early signs of Alzheimer's disease in clinical settings.
 
-We will use the longitudinal tabular dataset Dementia Classification: Compare Classifiers from Kaggle.com (Deepak N, 2018), with the pathway “oasis_longitudinal.csv”. It should be noted that this is a real data set coming directly from the MRI Open Access Series of Imaging Studies (OASIS-2, 2009). This dataset consists of 15 variables and 373 rows, sampling from 150 participants of age 60-96. It classifies whether participants have dementia or not. This table includes description of the variables:
+We will use the longitudinal tabular dataset Dementia Classification: Compare Classifiers from Kaggle.com [@Deepak2018], with the pathway “oasis_longitudinal.csv”. It should be noted that this is a real data set coming directly from the MRI Open Access Series of Imaging Studies [@Marcus2010]. This dataset consists of 15 variables and 373 rows, sampling from 150 participants of age 60-96. It classifies whether participants have dementia or not. This table includes description of the variables:
 
-<img src="https://raw.githubusercontent.com/churancc/Dementia_Project/main/Table%20column%20descriptors.png" width="500"/>
-
-**Table 1.0: Description of Dataset Variables**
+![Description of Dataset Variables for the OASIS-2 dataset](../attachments/variable-descriptors.png){#fig-table-descriptors width=80% fig-align="center" fig-cap="Column descriptors for the OASIS-2 Longitudinal Dementia Dataset."}
 
 ### Methods & Results:
 
@@ -377,20 +379,12 @@ Our analysis aimed to predict the presence of Alzheimer’s Disease (AD), depend
 
 To build a strong predictive model, we conducted parameter selection using cross-validated on the training set. Our best parameter selection was K = 16 with a 81.25% validation accuracy. Subsequently, using the optimal K to predict the testing set, our model's accuracy was discovered to be 80.95%, which was comparable to the cross-validation accuracy estimate. It may appear that our classifier can effectively detect signs of AD with a new data set; however, a satisfactory accuracy depends on the application. In the confusion matrix, the testing set prediction produced 47 true negatives, 21 true positive, 15 false negative and 1 false positive. At first glance, 47 + 21 = 68 correct predictions out of 84 seems plausible, yet there are 15 demented patients being falsely classified as nondemented. That is, the false-negative rate here is 15/68 = 17.86%. This false-negative rate suggests that application-wise, this predictive model is not exceptional at correctly detecting dementia.
 
-Another distinction to make is the fact that accuracy is calculated taking into consideration both true positive and true negative. This is a reason contributing to the high accuracy percentage we received. Notice that there are more than double the amount of true false predictions compared to true positive. This is an example of a class imbalance that often occurs in data analysis. We are only interested in how our model can successfully predict the negative class (demented group), so successfully predicting the positive (non-demented group) is unuseful. This makes the accuracy we initially calculated very misleading. This is a limitation of our data analysis that can be improved by balancing our dataset initially so it will have similar numbers of positive and negative classes. Also, to improve our method of assessing future predictive models, precision and recall can be used according to Wasikowski & Chen (2010).
+Another distinction to make is the fact that accuracy is calculated taking into consideration both true positive and true negative. This is a reason contributing to the high accuracy percentage we received. Notice that there are more than double the amount of true false predictions compared to true positive. This is an example of a class imbalance that often occurs in data analysis. We are only interested in how our model can successfully predict the negative class (demented group), so successfully predicting the positive (non-demented group) is unuseful. This makes the accuracy we initially calculated very misleading. This is a limitation of our data analysis that can be improved by balancing our dataset initially so it will have similar numbers of positive and negative classes. Also, to improve our method of assessing future predictive models, precision and recall can be used according to [@Wasikowski2010].
 
 Despite the limitations and concerns mentioned, our model can still contribute positively to medical data analysis. As the size of the medical digital database is rapidly expanding, data analysis is more common, suggesting a higher demand for classification models to help with disease detection. In addition to the lack of definitive diagnoses, as global aging is becoming more relevant, improvement on dementia detection is crucial. Our analysis can thus help with predicting onsets of AD, allowing medical professionals to provide effective treatments before symptoms exacerbate. A more accessible education system may also delay or prevent AD.
 
 Further research can be done to address the imbalance of our chosen dataset, improve the accuracy of our classification model and utilize better methods of assessing the model. As more data sets related to Dementia become available, the predictive model for classification can then be continued to improve upon. This may lead to future questions not only regarding other predictors but also how the different predictors may have effects on each other that contribute to the development of Dementia. Our model could also be applied to other neurodegenerative diseases, such as Parkinson’s disease.
 
-### Reference
-
-Ash, L. E. (2007). Dementia. On Call Series: On Call Neurology (3rd ed., pp. 401-417), W.B. Saunders.
-
-Deepak N. (2018). Dementia Classification :Compare Classifiers: Python · MRI and Alzheimers. Kaggle. <https://www.kaggle.com/code/deepak525/dementia-classification-compare-classifiers/input>
-
-OASIS-2: Longitudinal. (2009). Open Access Series of Imaging Studies. doi: 10.1162/jocn.2009.21407
-
-Reuben, A., Brickman, A., Muraskin, J., Steffener, J., & Stern, Y. (2011). Hippocampal Atrophy Relates to Fluid Intelligence Decline in the Elderly. Journal of the International Neuropsychological Society, 17(1), 56-61. doi: 10.1017/S135561771000127X
-
-Wasikowski, M. and Chen, X. -w. (2010). "Combating the Small Sample Class Imbalance Problem Using Feature Selection," in IEEE Transactions on Knowledge and Data Engineering, vol. 22, no. 10, pp. 1388-1400, Oct. 2010, doi: 10.1109/TKDE.2009.187.
+## Reference
+  
+  
