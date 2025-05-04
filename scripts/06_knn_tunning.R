@@ -15,6 +15,7 @@ library(readr)
 library(forcats)
 library(ggplot2)
 library(tidymodels)
+set.seed(999)
 
 opt <- docopt(doc)
 options(repr.plot.width = 13)
@@ -54,4 +55,4 @@ accuracy_vs_k <- ggplot(accuracies, aes(x = neighbors, y = mean)) +
                  theme(text = element_text(size = 16))
 ggsave(opt$accuracy_vs_k_plot)
 
-# Rscript scripts/06_knn_tunning.R --training_set="data/processed/05_training_set.csv" --knn_recipe="results/models/01_knn_train_recipe.rds" --tunning_accuracies_tbl="05_tunning_accuracies_tbl.csv" --accuracy_vs_k_plot="results/figures/04_accuracy_vs_k_plot.png"
+# Rscript scripts/06_knn_tunning.R --training_set="data/processed/05_training_set.csv" --knn_recipe="results/models/01_knn_train_recipe.rds" --tunning_accuracies_tbl="results/tables/05_tunning_accuracies_tbl.csv" --accuracy_vs_k_plot="results/figures/05_accuracy_vs_k_plot.png"
