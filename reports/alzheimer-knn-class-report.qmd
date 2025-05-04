@@ -9,23 +9,24 @@ csl: references/apa.csl
 lightbox: true
 ---
 
-### Introduction:
+## Introduction:
 
 Dementia is a chronic condition associated with aging and brain atrophy, involving widespread neuropsychological deficits that significantly hinder daily activities [@Reuben2011]. Our project focuses on Alzheimer's disease, the most common form of dementia. Unfortunately, Alzheimer’s has neither definitive diagnosis nor cure [@Ash2007]. This exploratory analysis aims to identify predictors to help with the early detection and prevention of Alzheimer's disease.
 
-Specifically, we want to examine whether (1) total brain volume, (2) Mini-mental State Examination score, and (3) education attainment can predict individuals’ dementia state. If these variables demonstrate to have high predictive strength for classifying dementia groups, they may be applied clinically as an accessible convenient technique for detecting early signs of Alzheimer's disease in clinical settings.
+Specifically, we want to examine whether (1) **total brain volume**, (2) **Mini-mental State Examination score**, and (3) **education attainment** can predict individuals’ dementia state. If these variables demonstrate to have high predictive strength for classifying dementia groups, they may be applied clinically as an accessible convenient technique for detecting early signs of Alzheimer's disease in clinical settings.
 
-We will use the longitudinal tabular dataset Dementia Classification: Compare Classifiers from Kaggle.com [@Deepak2018], with the pathway “oasis_longitudinal.csv”. It should be noted that this is a real data set coming directly from the MRI Open Access Series of Imaging Studies [@Marcus2010]. This dataset consists of 15 variables and 373 rows, sampling from 150 participants of age 60-96. It classifies whether participants have dementia or not. This table includes description of the variables:
+We will use the longitudinal tabular dataset Dementia Classification: Compare Classifiers from Kaggle.com [@Deepak2018], with the pathway “oasis_longitudinal.csv”. Although first accessed through Kaggle, this dataset originates from the MRI Open Access Series of Imaging Studies OASIS-2 [@Marcus2010]. This dataset consists of 15 variables and 373 rows, sampling from 150 participants of age 60-96. It classifies whether participants have dementia or not. This table includes description of the variables:
 
 ![Description of Dataset Variables for the OASIS-2 dataset](../attachments/variable-descriptors.png){#fig-table-descriptors width=80% fig-align="center" fig-cap="Column descriptors for the OASIS-2 Longitudinal Dementia Dataset."}
 
-### Methods & Results:
+## Methods & Results:
 
-Exploratory data analysis (EDA) We begin by loading our data set into Jupyter and tidying before investigating the data set. Using the R-programming language on Jupyter, the main characteristics of the data set is summarized and data visualizations are created for variables of interest.
+### Exploratory data analysis (EDA) 
+We begin by loading our data set into Jupyter and tidying before investigating the data set. Using the R-programming language on Jupyter, the main characteristics of the data set is summarized and data visualizations are created for variables of interest.
 
 Loading & Tidying Data We load the packages tidyverse, purr and tidymodels in Jupyter R. To ensure data reproducibility, the seed to 999.
 
-```{r}
+```{r warning = FALSE}
 library(tidyverse)
 library(purrr)
 library(tidymodels)
@@ -62,6 +63,7 @@ unique_names <- make.names(names(dementia), unique = TRUE)
 colnames(dementia) <- unique_names
 
 head(dementia) # Preview data set
+
 ```
 
 ```{r}
@@ -82,7 +84,8 @@ dementia_filter <- dementia |>
 ```{r}
 dementia_filter |>
 pull(Group) |>
-levels() 
+levels()|>
+  as_tibble()
 # Filtering the dataframe doesn't change the number of factor levels.
 ```
 
@@ -97,7 +100,8 @@ dementia <- dementia |>
 
 dementia |>
 pull(Group) |>
-levels() # Group no longers has the factor level 'Converted'.
+levels() |>
+  as_tibble()# Group no longers has the factor level 'Converted'.
 ```
 
 (5) Finally, we identified two NA (missing values) in the MMSE column from Subject#181, which we removed. This removal is justifiable since Subject#181’s measures did not vary greatly between visits.
@@ -119,7 +123,7 @@ dementia_train <- training(dementia_split)
 dementia_test <- testing(dementia_split)
 ```
 
-#### Tables
+### Tables
 
 **First table**:
 
@@ -148,7 +152,7 @@ map_df(mean, na.rm = TRUE)
 predictor_mean_table
 ```
 
-#### Visualization
+### Visualization
 
 Boxplots are used to observe the differences between Nondemented and Demented groups. By inputting the training data into boxplots, a large median difference between the Nondemented and Demented groups indicates the predictors chosen to be good.
 
@@ -210,7 +214,8 @@ nWBV_boxplot + scale_fill_brewer(palette = "RdYlBu")
 
 The above boxplots show distinct differences between the Nondemented vs. Demented groups across `EDUC`, `MMSE`, and `nWBV`. These differences helped to affirm our predictor choice for classifying dementia state.
 
-### Final Analysis with K-Nearest Neighbors Algorithm
+### K-Nearest Neighbors Classification
+#### Hyperparameter Tuning: 
 
 This analysis will evaluate the `EDUC`, `MMSE`, and `nWBV` predictive strength for the classifier `Group`.
 
@@ -312,7 +317,7 @@ dementia_3D <- plot_ly(dementia_train, x = ~EDUC, y = ~MMSE, z = ~nWBV, type="sc
 dementia_3D
 ```
 
-#### Evaluate Optimal K with Testing Set
+### Evaluate Tuned Optimal K with Testing Set
 
 We extract the best K-neighbor as `optimal_k` from the `accuracies` table to build an optimal classifier.
 
@@ -373,7 +378,7 @@ confusion
 autoplot(confusion, type = 'heatmap')
 ```
 
-### Discussion
+## Discussion
 
 Our analysis aimed to predict the presence of Alzheimer’s Disease (AD), depending on education levels, Mini-Mental Status Examination and Total Brain Volume. To answer this categorical predictive problem, we used the K-nearest neighbors classification algorithm. Prior to our analysis, we anticipated that people over 60 with high mini-mental state exam scores, levels of schooling, and total brain volume would most likely be non-demented. Our exploratory analysis confirmed our expectation.
 
